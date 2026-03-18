@@ -88,44 +88,37 @@ User Input
 ## Voice Agent (Vapi.ai)
 
 Two named voice assistants that share the same tool logic as the chatbot:
-- **Noor** — Arabic (Deepgram Arabic STT + ElevenLabs multilingual TTS)
-- **Layla** — English (Deepgram English STT + ElevenLabs multilingual TTS)
+- **Noor** — English male voice (ElevenLabs multilingual TTS + Deepgram STT)
+- **Layla** — Arabic female voice, Gulf-friendly tone (ElevenLabs multilingual TTS + Deepgram STT)
 
-### Setup
+### Live demo
+
+The full multi-channel demo (voice + chat + WhatsApp) is deployed at:
+
+**https://noorshop-demo.vercel.app**
+
+No setup required. Open the URL and interact directly.
+
+### Local setup (optional — for WhatsApp webhook testing)
 
 ```bash
 pip install fastapi uvicorn requests python-dotenv
 
-# Set in .env (workspace root):
-# VAPI_API_KEY=...
-# ELEVENLABS_VOICE_ID_AR=...
-# ELEVENLABS_VOICE_ID_EN=...
-# TOOL_SERVER_URL=https://<ngrok-id>.ngrok.io  ← set after step 2
+# Terminal 1 — start API locally
+cd api
+uvicorn index:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 — expose via ngrok (permanent static domain)
+ngrok http --domain=pedagoguish-denticulately-darcey.ngrok-free.dev 8000
 ```
 
-### Run
+Set Twilio sandbox webhook to: `https://pedagoguish-denticulately-darcey.ngrok-free.dev/api/whatsapp`
+
+### Recreate voice assistants
 
 ```bash
-# Terminal 1 — start tool server
-uvicorn tool_server:app --host 0.0.0.0 --port 8000
-
-# Terminal 2 — expose tool server publicly
-ngrok http 8000
-# Copy the https URL → add to .env as TOOL_SERVER_URL
-
-# Terminal 3 — create assistants + get web call URLs
-python3 voice_agent.py              # both Noor and Layla
-python3 voice_agent.py --lang ar    # Noor only
-python3 voice_agent.py --lang en    # Layla only
-```
-
-Open the printed web call URL in any browser to start the voice conversation.
-
-### Other commands
-
-```bash
-python3 voice_agent.py --list               # list existing NoorShop assistants
-python3 voice_agent.py --call ASSISTANT_ID  # launch new web call for existing assistant
+python3 voice_agent.py --recreate   # delete + recreate Noor and Layla
+python3 voice_agent.py --list       # list existing NoorShop assistants
 ```
 
 ---
@@ -134,20 +127,26 @@ python3 voice_agent.py --call ASSISTANT_ID  # launch new web call for existing a
 
 ```
 03_chatbot/
-├── chatbot.py        Main CLI chatbot loop
-├── tools.py          Tool schemas (Claude) + Python implementations
-├── mock_data.py      Mock product catalog, orders, policies, promo codes
-├── tool_server.py    FastAPI webhook server for Vapi tool calls
-├── voice_agent.py    Creates Vapi assistants (Noor/Layla) + web call URLs
-└── README.md         This file
+├── api/
+│   ├── index.py          FastAPI app (chat, WhatsApp, Vapi tools) — Vercel entry point
+│   ├── tools.py          Tool schemas + Python implementations
+│   ├── mock_data.py      Mock product catalog, orders, policies, promo codes
+│   └── static/
+│       ├── index.html    Demo page (4 channels)
+│       └── vapi.bundle.js Vapi Web SDK (bundled)
+├── chatbot.py            CLI prototype (original)
+├── voice_agent.py        Creates/recreates Vapi assistants
+├── vercel.json           Vercel deployment config
+├── requirements.txt      Python dependencies
+└── README.md             This file
 ```
 
 ---
 
 ## Mock data overview
 
-- **10 products** across electronics, fashion, footwear, home, beauty
-- **6 orders** in various states: processing, shipped, out for delivery, delivered, cancelled
+- **18 products** across electronics, fashion, footwear, home appliances, kitchen, smart home, beauty
+- **10 orders** in various states: processing, shipped, out for delivery, delivered, cancelled
 - **Return policy** with 14-day window, refund timelines per payment method
 - **3 promo codes** (SAVE10, WELCOME50, FREESHIP)
 
