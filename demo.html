@@ -111,6 +111,24 @@
     #chat-send:hover { background: #d97706; }
     #chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* ── Metrics bar ── */
+    .metrics-bar {
+      display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center;
+      margin-top: 2.2rem; padding: 1.1rem 1.6rem;
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      max-width: 700px; width: 100%;
+    }
+    .metric {
+      display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+      min-width: 110px;
+    }
+    .metric-value { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; }
+    .metric-label { font-size: 0.68rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .metric-value.csat { color: #fbbf24; }
+    .metric-value.green { color: #4ade80; }
+    .metric-value.blue { color: #93c5fd; }
+    .metric-value.red { color: #f87171; }
+
     footer { margin-top: 2.5rem; font-size: 0.72rem; color: #475569; }
   </style>
 </head>
@@ -143,7 +161,7 @@
     </div>
 
     <!-- Voice EN -->
-    <div class="card voice-en btn-lang" data-assistant-id="41fd4044-0557-4093-92bc-05b4008c947a" id="card-en">
+    <div class="card voice-en btn-lang" data-assistant-id="d5b16ac0-0759-4361-962b-2650b3a25112" id="card-en">
       <div class="card-icon">🎙</div>
       <div class="card-title">Noor</div>
       <div class="card-sub">Voice support in English</div>
@@ -151,7 +169,7 @@
     </div>
 
     <!-- Voice AR -->
-    <div class="card voice-ar btn-lang" data-assistant-id="ef63ec67-0a48-4493-a3d2-8e7dae94f329" id="card-ar">
+    <div class="card voice-ar btn-lang" data-assistant-id="973fd0ff-2fd4-4653-93ff-bd96efa3c7b3" id="card-ar">
       <div class="card-icon">🎙</div>
       <div class="card-title">Layla</div>
       <div class="card-sub-ar" style="direction:rtl">دعم صوتي بالعربية</div>
@@ -177,6 +195,30 @@
     <div class="chat-input-row">
       <input id="chat-input" type="text" placeholder="Type a message... / اكتب رسالة..." autocomplete="off" />
       <button id="chat-send">Send</button>
+    </div>
+  </div>
+
+  <!-- Live metrics bar -->
+  <div class="metrics-bar" id="metrics-bar">
+    <div class="metric">
+      <span class="metric-value csat" id="m-csat">—</span>
+      <span class="metric-label">Avg CSAT / 5 ⭐</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value green" id="m-conv">—</span>
+      <span class="metric-label">Conversations</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value blue" id="m-ratings">—</span>
+      <span class="metric-label">Ratings collected</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value red" id="m-esc">—</span>
+      <span class="metric-label">Escalation rate</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value green" id="m-disc">—</span>
+      <span class="metric-label">Discounts applied</span>
     </div>
   </div>
 
@@ -296,6 +338,21 @@
     });
     sendBtn.addEventListener("click", sendMessage);
     input.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+
+    /* ── Metrics ── */
+    async function refreshMetrics() {
+      try {
+        const r = await fetch(CHAT_API + "/api/metrics");
+        const d = await r.json();
+        document.getElementById("m-csat").textContent    = d.avg_csat.toFixed(1);
+        document.getElementById("m-conv").textContent    = d.total_conversations;
+        document.getElementById("m-ratings").textContent = d.total_ratings;
+        document.getElementById("m-esc").textContent     = d.escalation_rate_pct + "%";
+        document.getElementById("m-disc").textContent    = d.discounts_applied;
+      } catch(e) { /* silent fail */ }
+    }
+    refreshMetrics();
+    setInterval(refreshMetrics, 15000);
   </script>
 </body>
 </html>

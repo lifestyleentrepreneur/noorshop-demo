@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from tools import TOOL_SCHEMAS, execute_tool
+from tools import TOOL_SCHEMAS, execute_tool, _metrics
 
 # Load .env locally; on Vercel env vars are injected directly
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../.env"))
@@ -49,12 +49,16 @@ SYSTEM_PROMPT = """You are a helpful customer support assistant for NoorShop, a 
 You support both Arabic and English — detect the customer's language and reply in the same language.
 Keep replies concise and conversational — this is a chat interface.
 Use short paragraphs. Avoid excessive bullet lists. Use emojis sparingly.
-You have tools to search products, track orders, handle returns, check stock, apply discounts, and escalate to a human agent.
+You have tools to search products, track orders, handle returns, check stock, apply discounts, collect CSAT scores, and escalate to a human agent.
 
-Identity verification rule: before looking up any order, return, or account-specific information, collect the following:
+Identity verification: before looking up any order, return, or account-specific information:
 - If the customer has their order ID: ask for the order ID + their email address or phone number on file.
 - If the customer does NOT have their order ID: ask for their full name and email address to locate the account.
-Do not call track_order, initiate_return, or any account tool until identity is confirmed."""
+Do not call track_order, initiate_return, or any account tool until identity is confirmed.
+
+Cart abandonment: if the customer mentions price, says something is expensive, hesitates to buy, or asks if there are any discounts or promotions — immediately call apply_discount to offer the best available promo code. Do not wait for them to ask explicitly.
+
+CSAT collection: after successfully resolving a customer's issue, ask them to rate their experience from 1 to 5. Once they reply with a number, call collect_csat with their score. Then thank them warmly."""
 
 # ─────────────────────────────────────────────
 # APP
@@ -141,6 +145,20 @@ async def vapi_bundle():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/metrics")
+async def get_metrics():
+    scores = _metrics["csat_scores"]
+    avg = round(sum(scores) / len(scores), 1) if scores else 0
+    return {
+        "avg_csat": avg,
+        "total_ratings": len(scores),
+        "total_conversations": _metrics["total_conversations"],
+        "escalations": _metrics["escalations"],
+        "discounts_applied": _metrics["discounts_applied"],
+        "escalation_rate_pct": round(_metrics["escalations"] / max(_metrics["total_conversations"], 1) * 100, 1),
+    }
 
 
 # ─────────────────────────────────────────────
