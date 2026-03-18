@@ -186,7 +186,7 @@ def _make_vapi_tools(server_url: str) -> list:
         {
             "type": "function",
             "function": td,
-            "server": {"url": f"{server_url}/tools"},
+            "server": {"url": f"{server_url}/api/tools"},
         }
         for td in tool_defs
     ]
