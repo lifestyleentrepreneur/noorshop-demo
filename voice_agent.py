@@ -463,7 +463,7 @@ def generate_demo_html(assistants: dict, public_key: str, chat_api_url: str = "h
 
     <!-- WhatsApp -->
     <a class="card whatsapp"
-       href="https://wa.me/{whatsapp_number}?text=Hello%2C%20I%20need%20help%20with%20my%20order"
+       href="https://wa.me/{whatsapp_number}?text=join%20slabs-knowledge"
        target="_blank">
       <div class="card-icon">💬</div>
       <div class="card-title">WhatsApp</div>
