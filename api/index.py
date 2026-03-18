@@ -23,7 +23,7 @@ import anthropic
 import openai
 import requests as http_requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -224,8 +224,40 @@ async def whatsapp_ping():
     return {"status": "whatsapp webhook is live"}
 
 
+def _send_whatsapp_reply(to: str, body: str) -> None:
+    """Send a WhatsApp message via Twilio REST API (used from background task)."""
+    safe = body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    try:
+        http_requests.post(
+            f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+            auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN),
+            data={
+                "From": "whatsapp:+14155238886",
+                "To": to,
+                "Body": safe,
+            },
+            timeout=10,
+        )
+    except Exception as exc:
+        log.error("Failed to send WhatsApp reply: %s", exc)
+
+
+def _handle_whatsapp_in_background(from_num: str, user_text: str) -> None:
+    """Run Claude and send the reply via Twilio REST API (no timeout pressure)."""
+    if not user_text:
+        reply = "Hi! I'm NoorShop's support assistant. How can I help you? 😊"
+    else:
+        try:
+            reply, _ = _run_claude([{"role": "user", "content": user_text}])
+        except Exception as exc:
+            log.error("Claude error: %s", exc)
+            reply = "Sorry, something went wrong. Please try again in a moment."
+    log.info("WhatsApp reply to %s: %s", from_num, reply[:80])
+    _send_whatsapp_reply(from_num, reply)
+
+
 @app.post("/api/whatsapp")
-async def whatsapp_webhook(request: Request):
+async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
     form       = await request.form()
     user_text  = form.get("Body", "").strip()
     from_num   = form.get("From", "unknown")
@@ -241,20 +273,10 @@ async def whatsapp_webhook(request: Request):
                 user_text = _transcribe_voice_note(media_url)
             except Exception as exc:
                 log.error("Transcription error: %s", exc)
-                twiml = '<?xml version="1.0"?><Response><Message>Sorry, I couldn\'t process the voice note. Please send text.</Message></Response>'
-                return Response(content=twiml, media_type="application/xml")
+                _send_whatsapp_reply(from_num, "Sorry, I couldn't process the voice note. Please send text.")
+                return Response(content="<Response/>", media_type="application/xml")
 
-    if not user_text:
-        reply = "Hi! I'm NoorShop's support assistant. How can I help you? 😊"
-    else:
-        # Stateless on Vercel (no cross-request memory)
-        try:
-            reply, _ = _run_claude([{"role": "user", "content": user_text}])
-        except Exception as exc:
-            log.error("Claude error: %s", exc)
-            reply = "Sorry, something went wrong. Please try again in a moment."
-
-    safe = reply.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{safe}</Message></Response>'
-    log.info("WhatsApp reply: %s", reply[:80])
-    return Response(content=twiml, media_type="application/xml")
+    # Respond to Twilio immediately to avoid 10-second timeout,
+    # then process Claude + send reply in background via Twilio REST API.
+    background_tasks.add_task(_handle_whatsapp_in_background, from_num, user_text)
+    return Response(content="<Response/>", media_type="application/xml")
