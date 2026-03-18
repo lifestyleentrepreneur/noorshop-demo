@@ -451,7 +451,7 @@ STORE_INFO = {
     "name_ar": "نور شوب",
     "support_hours": "Sun–Thu 9AM–10PM, Fri–Sat 12PM–10PM (AST)",
     "support_email": "support@noorshop.sa",
-    "support_phone": "920-000-1234",
+    "support_phone": "+1 415 523 8886",
     "whatsapp": "+14155238886",
     "shipping_fee": 25,
     "free_shipping_threshold": 300,

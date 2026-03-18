@@ -519,7 +519,7 @@ def generate_demo_html(assistants: dict, public_key: str, chat_api_url: str = "h
     </div>
   </div>
 
-  <footer>NoorShop · support@noorshop.sa · 920-000-1234</footer>
+  <footer>NoorShop · support@noorshop.sa · WhatsApp: +1 415 523 8886</footer>
 
   <script src="vapi.bundle.js"></script>
   <script>
