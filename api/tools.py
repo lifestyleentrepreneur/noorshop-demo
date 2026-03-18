@@ -13,6 +13,17 @@ Zendesk for escalation tickets, and an analytics DB for CSAT storage.
 from mock_data import PRODUCTS, ORDERS, RETURN_POLICY, PROMO_CODES, STORE_INFO
 
 # ─────────────────────────────────────────────
+# IN-MEMORY METRICS STORE  (pre-seeded for demo)
+# ─────────────────────────────────────────────
+
+_metrics = {
+    "csat_scores": [5, 4, 5, 5, 4, 5, 3, 5, 4, 5, 5, 4, 5, 4, 5, 3, 5, 4],
+    "total_conversations": 47,
+    "escalations": 4,
+    "discounts_applied": 9,
+}
+
+# ─────────────────────────────────────────────
 # TOOL SCHEMAS (passed to Claude API)
 # ─────────────────────────────────────────────
 
@@ -124,6 +135,28 @@ TOOL_SCHEMAS = [
                 },
             },
             "required": ["cart_value"],
+        },
+    },
+    {
+        "name": "collect_csat",
+        "description": (
+            "Record a customer satisfaction score after resolving their issue. "
+            "Call this when the customer provides a rating (1–5). "
+            "Also increments the conversation counter."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "score": {
+                    "type": "integer",
+                    "description": "Customer rating from 1 (very unhappy) to 5 (very happy)",
+                },
+                "channel": {
+                    "type": "string",
+                    "description": "Channel: chat, whatsapp, voice_en, voice_ar",
+                },
+            },
+            "required": ["score"],
         },
     },
     {
@@ -372,6 +405,20 @@ def apply_discount(cart_value: float, promo_code: str = None) -> dict:
     }
 
 
+def collect_csat(score: int, channel: str = "chat") -> dict:
+    """Record a CSAT score and increment conversation counter."""
+    score = max(1, min(5, int(score)))
+    _metrics["csat_scores"].append(score)
+    _metrics["total_conversations"] += 1
+    avg = sum(_metrics["csat_scores"]) / len(_metrics["csat_scores"])
+    return {
+        "recorded": True,
+        "score": score,
+        "average_csat": round(avg, 2),
+        "message": "Thank you for your feedback! Your rating has been recorded.",
+    }
+
+
 def escalate_to_human(reason: str, priority: str = "normal") -> dict:
     """Escalate conversation to a human agent."""
     ticket_id = f"TKT-{hash(reason) % 100000:05d}"
@@ -406,6 +453,7 @@ def execute_tool(tool_name: str, tool_input: dict) -> dict:
         "initiate_return": initiate_return,
         "check_stock_and_delivery": check_stock_and_delivery,
         "apply_discount": apply_discount,
+        "collect_csat": collect_csat,
         "escalate_to_human": escalate_to_human,
     }
     fn = dispatch.get(tool_name)
