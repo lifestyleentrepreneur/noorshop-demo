@@ -252,7 +252,7 @@ def _build_assistant_config(
         "maxDurationSeconds": 600,
         "backgroundSound": "off",
         "backchannelingEnabled": False,
-        "numWordsToInterruptAssistant": 1,
+        "numWordsToInterruptAssistant": 3,
         "metadata": {"store": "NoorShop", "lang": lang},
     }
 
