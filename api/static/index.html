@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoorShop Support</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f1f5f9; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 2rem;
+    }
+    .logo { font-size: 2.4rem; margin-bottom: 0.3rem; }
+    h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+    .tagline { color: #94a3b8; font-size: 0.9rem; margin-top: 0.3rem; margin-bottom: 2.8rem; }
+
+    /* ── Cards ── */
+    .channels { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; }
+    .card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 18px;
+      padding: 1.8rem 1.5rem; width: 185px; text-align: center;
+      cursor: pointer; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; align-items: center; gap: 0.65rem;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+    .card.whatsapp:hover  { border-color: #25D366; }
+    .card.livechat:hover  { border-color: #f59e0b; }
+    .card.voice-en:hover  { border-color: #3b82f6; }
+    .card.voice-ar:hover  { border-color: #a855f7; }
+    .card.active   { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+    .card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+    .card-icon  { font-size: 2.2rem; }
+    .card-title { font-size: 1rem; font-weight: 700; }
+    .card-sub   { font-size: 0.75rem; color: #94a3b8; line-height: 1.5; }
+    .card-sub-ar { font-size: 0.72rem; color: #64748b; direction: rtl; }
+    .badge {
+      display: inline-block; font-size: 0.63rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .badge-green  { background: #14532d; color: #4ade80; }
+    .badge-amber  { background: #451a03; color: #fbbf24; }
+    .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+    .badge-purple { background: #3b0764; color: #d8b4fe; }
+
+    /* ── Voice status bar ── */
+    #call-status {
+      margin-top: 2rem; padding: 0.65rem 1.6rem;
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      font-size: 0.88rem; color: #94a3b8; min-width: 300px; text-align: center;
+    }
+    #call-status.hidden { display: none; }
+    #stop-btn {
+      margin-top: 0.8rem; padding: 0.55rem 1.4rem;
+      background: #dc2626; color: #fff; border: none; border-radius: 10px;
+      font-size: 0.88rem; font-weight: 600; cursor: pointer; display: none;
+    }
+    #stop-btn:hover { background: #b91c1c; }
+    .dot {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: #22c55e; margin-right: 5px; animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── Chat panel ── */
+    #chat-panel {
+      display: none; flex-direction: column;
+      width: 100%; max-width: 420px; height: 480px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 18px;
+      margin-top: 1.8rem; overflow: hidden;
+    }
+    #chat-panel.open { display: flex; }
+    .chat-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.2rem; border-bottom: 1px solid #334155; flex-shrink: 0;
+    }
+    .chat-header-title { font-weight: 700; font-size: 0.95rem; }
+    .chat-header-sub   { font-size: 0.72rem; color: #94a3b8; }
+    .chat-close {
+      background: none; border: none; color: #94a3b8;
+      font-size: 1.2rem; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    }
+    .chat-close:hover { background: #334155; color: #f1f5f9; }
+    #chat-messages {
+      flex: 1; overflow-y: auto; padding: 1rem; display: flex;
+      flex-direction: column; gap: 0.6rem;
+    }
+    .msg {
+      max-width: 80%; padding: 0.55rem 0.9rem;
+      border-radius: 14px; font-size: 0.88rem; line-height: 1.5; word-break: break-word;
+    }
+    .msg.bot  { background: #0f172a; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg.user { background: #1d4ed8; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg.typing { color: #64748b; font-style: italic; }
+    .chat-input-row {
+      display: flex; gap: 0.5rem; padding: 0.8rem 1rem;
+      border-top: 1px solid #334155; flex-shrink: 0;
+    }
+    #chat-input {
+      flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+      color: #f1f5f9; padding: 0.55rem 0.9rem; font-size: 0.88rem; outline: none;
+    }
+    #chat-input:focus { border-color: #f59e0b; }
+    #chat-send {
+      background: #f59e0b; color: #0f172a; border: none; border-radius: 10px;
+      padding: 0.55rem 1rem; font-weight: 700; cursor: pointer; font-size: 0.88rem;
+    }
+    #chat-send:hover { background: #d97706; }
+    #chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    footer { margin-top: 2.5rem; font-size: 0.72rem; color: #475569; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">🛍</div>
+  <h1>NoorShop Customer Support</h1>
+  <p class="tagline">Choose how you'd like to reach us · اختر طريقة التواصل</p>
+
+  <div class="channels">
+
+    <!-- WhatsApp -->
+    <a class="card whatsapp"
+       href="https://wa.me/966500001234?text=Hello%2C%20I%20need%20help%20with%20my%20order"
+       target="_blank">
+      <div class="card-icon">💬</div>
+      <div class="card-title">WhatsApp</div>
+      <div class="card-sub">Chat with us on WhatsApp</div>
+      <div class="card-sub-ar">تواصل معنا عبر واتساب</div>
+      <span class="badge badge-green">EN · عربي</span>
+    </a>
+
+    <!-- Live Chat -->
+    <div class="card livechat" id="card-chat">
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">Live Chat</div>
+      <div class="card-sub">Chat here on this page</div>
+      <div class="card-sub-ar">تحدث معنا هنا مباشرة</div>
+      <span class="badge badge-amber">EN · عربي</span>
+    </div>
+
+    <!-- Voice EN -->
+    <div class="card voice-en btn-lang" data-assistant-id="88c8e6d8-cc8b-435b-8cd8-affa4aeb754e" id="card-en">
+      <div class="card-icon">🎙</div>
+      <div class="card-title">Noor</div>
+      <div class="card-sub">Voice support in English</div>
+      <span class="badge badge-blue">English</span>
+    </div>
+
+    <!-- Voice AR -->
+    <div class="card voice-ar btn-lang" data-assistant-id="" id="card-ar">
+      <div class="card-icon">🎙</div>
+      <div class="card-title">Layla</div>
+      <div class="card-sub-ar" style="direction:rtl">دعم صوتي بالعربية</div>
+      <span class="badge badge-purple">عربي</span>
+    </div>
+
+  </div>
+
+  <!-- Voice status -->
+  <div id="call-status" class="hidden"></div>
+  <button id="stop-btn">⏹ End Call</button>
+
+  <!-- Chat panel -->
+  <div id="chat-panel">
+    <div class="chat-header">
+      <div>
+        <div class="chat-header-title">🛍 NoorShop Support</div>
+        <div class="chat-header-sub">Typically replies instantly · يرد فوراً</div>
+      </div>
+      <button class="chat-close" id="chat-close-btn">✕</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" type="text" placeholder="Type a message... / اكتب رسالة..." autocomplete="off" />
+      <button id="chat-send">Send</button>
+    </div>
+  </div>
+
+  <footer>NoorShop · support@noorshop.sa · 920-000-1234</footer>
+
+  <script src="vapi.bundle.js"></script>
+  <script>
+    /* ── Config ── */
+    const VAPI_PUBLIC_KEY = "a7012183-c5a6-41d4-9cfc-f62563b4fa23";
+    const CHAT_API = "";  // empty = same origin
+    let vapi = null;
+    let chatHistory = JSON.parse(localStorage.getItem("noorshop_chat") || "[]");
+
+    /* ── Voice ── */
+    const statusEl = document.getElementById("call-status");
+    const stopBtn  = document.getElementById("stop-btn");
+
+    function setStatus(msg, live) {
+      statusEl.classList.remove("hidden");
+      statusEl.innerHTML = live ? '<span class="dot"></span>' + msg : msg;
+    }
+    function resetVoiceUI() {
+      document.querySelectorAll(".btn-lang").forEach(c => c.classList.remove("active","disabled"));
+      stopBtn.style.display = "none";
+      statusEl.classList.add("hidden");
+    }
+    function startCall(assistantId, cardEl) {
+      if (vapi) vapi.stop();
+      try { vapi = new (VapiSDK.default || VapiSDK.Vapi || Object.values(VapiSDK)[0])(VAPI_PUBLIC_KEY); }
+      catch(e) { setStatus("Init error: " + e.message); return; }
+      vapi.on("call-start",   () => setStatus("Connected — speak now", true));
+      vapi.on("call-end",     () => { setStatus("Call ended"); setTimeout(resetVoiceUI, 1500); });
+      vapi.on("error",        (e) => { setStatus("Error: " + (e?.message || JSON.stringify(e))); resetVoiceUI(); });
+      vapi.on("speech-start", () => setStatus("Listening...", true));
+      vapi.on("speech-end",   () => setStatus("Processing...", true));
+      document.querySelectorAll(".btn-lang").forEach(c => c.classList.add("disabled"));
+      cardEl.classList.remove("disabled"); cardEl.classList.add("active");
+      stopBtn.style.display = "inline-block";
+      setStatus("Connecting...", true);
+      vapi.start(assistantId);
+    }
+    document.querySelectorAll("[data-assistant-id]").forEach(card => {
+      card.addEventListener("click", () => startCall(card.dataset.assistantId, card));
+    });
+    stopBtn.addEventListener("click", () => { if (vapi) vapi.stop(); });
+
+    /* ── Chat panel ── */
+    const panel     = document.getElementById("chat-panel");
+    const messages  = document.getElementById("chat-messages");
+    const input     = document.getElementById("chat-input");
+    const sendBtn   = document.getElementById("chat-send");
+    let chatReady   = false;
+
+    function addMsg(text, role) {
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+
+    async function openChat() {
+      panel.classList.add("open");
+      document.getElementById("card-chat").classList.add("active");
+      if (!chatReady) {
+        chatReady = true;
+        // Restore history from localStorage
+        if (chatHistory.length > 0) {
+          // Re-render stored messages (user messages only for simplicity)
+          chatHistory.forEach(m => {
+            if (m.role === "user" && typeof m.content === "string") addMsg(m.content, "user");
+          });
+        } else {
+          const typing = addMsg("Connecting...", "bot typing");
+          const res = await fetch(CHAT_API + "/api/chat", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message: "__init__", messages: []})
+          }).catch(() => null);
+          typing.remove();
+          addMsg(res ? (await res.json()).reply : "Hi! How can I help you today? 😊", "bot");
+        }
+      }
+      input.focus();
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      sendBtn.disabled = true;
+      addMsg(text, "user");
+      const typing = addMsg("Typing...", "bot typing");
+      try {
+        const res  = await fetch(CHAT_API + "/api/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: text, messages: chatHistory})
+        });
+        const data = await res.json();
+        typing.remove();
+        addMsg(data.reply, "bot");
+        chatHistory = data.messages || chatHistory;
+        localStorage.setItem("noorshop_chat", JSON.stringify(chatHistory));
+      } catch(e) {
+        typing.remove();
+        addMsg("Sorry, something went wrong. Please try again.", "bot");
+      }
+      sendBtn.disabled = false;
+      input.focus();
+    }
+
+    document.getElementById("card-chat").addEventListener("click", openChat);
+    document.getElementById("chat-close-btn").addEventListener("click", () => {
+      panel.classList.remove("open");
+      document.getElementById("card-chat").classList.remove("active");
+    });
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+  </script>
+</body>
+</html>
