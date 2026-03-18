@@ -219,6 +219,11 @@ def _transcribe_voice_note(media_url: str) -> str:
     return _openai_client.audio.transcriptions.create(model="whisper-1", file=buf).text
 
 
+@app.get("/api/whatsapp")
+async def whatsapp_ping():
+    return {"status": "whatsapp webhook is live"}
+
+
 @app.post("/api/whatsapp")
 async def whatsapp_webhook(request: Request):
     form       = await request.form()
@@ -249,6 +254,7 @@ async def whatsapp_webhook(request: Request):
             log.error("Claude error: %s", exc)
             reply = "Sorry, something went wrong. Please try again in a moment."
 
-    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{reply}</Message></Response>'
+    safe = reply.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{safe}</Message></Response>'
     log.info("WhatsApp reply: %s", reply[:80])
     return Response(content=twiml, media_type="application/xml")
